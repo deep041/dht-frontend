@@ -1,0 +1,41 @@
+.item-selection-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.item-selection-row {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.item-selection-row .select,
+.item-selection-row .input {
+  flex: 1 1 180px;
+  min-width: 160px;
+}
+
+.remove-button {
+  border: 1px solid #d32f2f;
+  background: #f44336;
+  color: white;
+  padding: 0.65rem 0.9rem;
+  border-radius: 5px;
+  cursor: pointer;
+  min-width: 110px;
+}
+
+.add-row-button {
+  border: 1px solid #1976d2;
+  background: #1976d2;
+  color: white;
+  padding: 0.7rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.item-selection-add-row {
+  margin-top: 0.5rem;
+}
