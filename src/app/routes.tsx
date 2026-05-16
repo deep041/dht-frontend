@@ -8,6 +8,7 @@ import RegionPage from "../features/crm/region/Region";
 import ZonePage from "../features/crm/zone/Zone";
 import SubZonePage from "../features/crm/sub-zone/Sub-Zone";
 import LeadsPage from "../features/crm/leads/Leads";
+import QuotationPage from "../features/sales/quotation/Quotation";
 import DepartmentPage from "../features/masters/department/Department";
 import PlantUnitPage from "../features/masters/store/plant-units/PlantUnits";
 import WarehousePage from "../features/masters/store/warehouse/Warehouse";
@@ -42,6 +43,9 @@ export default function AppRoutes() {
                         <Route path="zone" element={<ZonePage />} />
                         <Route path="sub-zone" element={<SubZonePage />} />
                         <Route path="leads" element={<LeadsPage />} />
+                    </Route>
+                    <Route path="sales">
+                        <Route path="quotation" element={<QuotationPage />} />
                     </Route>
                     <Route path="master">
                         <Route path="party-groups" element={<PartyGroupPage />} />
