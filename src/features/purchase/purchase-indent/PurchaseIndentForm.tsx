@@ -203,14 +203,14 @@ export default function PurchaseIndentForm({
               options={PR_TYPES}
               onChange={value => handleChange('typeOfPr', String(value))}
             />
-            <label className="pi-checkbox-label">
+            {/* <label className="pi-checkbox-label">
               <input
                 type="checkbox"
                 checked={form.docAttachmentRequired}
                 onChange={e => handleChange('docAttachmentRequired', e.target.checked)}
               />
               Any Doc Has to Attached it.
-            </label>
+            </label> */}
           </div>
 
           <div className="form-controller pi-remarks-row">

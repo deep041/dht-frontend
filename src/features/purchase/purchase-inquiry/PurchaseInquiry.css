@@ -1,0 +1,31 @@
+.pqi-line-items-header,
+.pqi-line-items-row {
+  grid-template-columns: minmax(120px, 1.1fr) minmax(100px, 1fr) 70px 70px 90px auto;
+}
+
+.pi-copy-indent-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-end;
+  flex: 1 1 100%;
+}
+
+.pi-copy-indent-row .select {
+  flex: 1;
+  min-width: 160px;
+}
+
+.pi-copy-indent-btn {
+  border: 1px solid #1976d2;
+  background: #1976d2;
+  color: #fff;
+  padding: 0.5rem 0.75rem;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+.pi-copy-indent-btn:hover {
+  background: #1565c0;
+}
