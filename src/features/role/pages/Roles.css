@@ -1,0 +1,37 @@
+.page-header-container {
+    height: 50px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+}
+
+.page-header-container h4 {
+    margin: 0;
+}
+
+.page-container {
+    padding: 0px 10px;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+table thead {
+    background-color: #ddd;
+}
+
+table thead th {
+    font-weight: normal;
+    padding: 5px 10px;
+}
+
+table tbody td {
+    padding: 5px 10px;
+}
+
+table tbody tr:nth-child(even) {
+    background-color: #f9f9f9;
+}

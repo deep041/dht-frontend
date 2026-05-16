@@ -1,0 +1,12 @@
+.page-container.company-details {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.save-button-container {
+    width: 100%;
+    padding: 10px;
+    display: flex;
+    justify-content: flex-end;
+}
