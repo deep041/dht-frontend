@@ -32,6 +32,7 @@ import RawMaterialPage from "../features/item-master/raw-material/raw-material";
 import ItemPage from "../features/item-master/item/item";
 import PurchaseIndentPage from "../features/purchase/purchase-indent/PurchaseIndent";
 import PurchaseInquiryPage from "../features/purchase/purchase-inquiry/PurchaseInquiry";
+import PurchaseOrderPage from "../features/purchase/purchase-order/PurchaseOrder";
 
 export default function AppRoutes() {
     return (
@@ -85,6 +86,7 @@ export default function AppRoutes() {
                         <Route path="purchase">
                             <Route path="purchase-indent" element={<PurchaseIndentPage />} />
                             <Route path="purchase-inquiry" element={<PurchaseInquiryPage />} />
+                            <Route path="purchase-order" element={<PurchaseOrderPage />} />
                         </Route>
                     </Route>
                 </Route>
