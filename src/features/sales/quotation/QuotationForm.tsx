@@ -1,25 +1,13 @@
-import { useState, useEffect } from 'react';
-import { Modal, Form, Row, Col, Button as BootstrapButton, Table } from 'react-bootstrap';
+import { useEffect, useMemo, useState } from 'react';
+import { Modal } from 'react-bootstrap';
+import Button from '../../../components/Button/Button';
 import Input from '../../../components/Input/Input';
 import Select from '../../../components/Select/Select';
+import QuotationLineItems, {
+  blankLineItem,
+  type QuotationLineItemRow
+} from './QuotationLineItems';
 import './Quotation.css';
-
-interface LineItem {
-  itemId: string;
-  description: string;
-  unitId: string;
-  hsnCode: string;
-  qty: number;
-  rate: number;
-  discountPercentage: number;
-  discountAmount: number;
-  taxableAmount: number;
-  cgstRate: number;
-  cgstAmount: number;
-  sgstRate: number;
-  sgstAmount: number;
-  lineTotal: number;
-}
 
 interface QuotationFormProps {
   show: boolean;
@@ -27,27 +15,63 @@ interface QuotationFormProps {
   onSubmit: (data: any) => void;
   initialData?: any;
   customers: any[];
-  contactPersons: any[];
   paymentTerms: any[];
   bankAccounts: any[];
   items: any[];
 }
 
-const blankLineItem: LineItem = {
-  itemId: '',
-  description: '',
-  unitId: '',
-  hsnCode: '',
-  qty: 0,
-  rate: 0,
-  discountPercentage: 0,
-  discountAmount: 0,
-  taxableAmount: 0,
-  cgstRate: 0,
-  cgstAmount: 0,
-  sgstRate: 0,
-  sgstAmount: 0,
-  lineTotal: 0
+const defaultForm = () => ({
+  customerId: '',
+  contactPersonId: '',
+  gstNo: '',
+  quoteDate: new Date().toISOString().split('T')[0],
+  expiryDate: '',
+  paymentTermId: '',
+  bankAccountId: '',
+  quoteType: 'GOODS',
+  termsAndConditions: '',
+  shippingCharge: '0'
+});
+
+const mapLineItemFromApi = (item: any): QuotationLineItemRow => {
+  const row: QuotationLineItemRow = {
+    itemId: String(item.itemId ?? ''),
+    description: item.description ?? '',
+    unitId: item.unitId ? String(item.unitId) : '',
+    hsnCode: item.hsnCode ?? '',
+    qty: String(item.qty ?? ''),
+    rate: String(item.rate ?? ''),
+    discountPercentage: String(item.discountPercentage ?? 0),
+    discountAmount: item.discountAmount ?? 0,
+    taxableAmount: item.taxableAmount ?? 0,
+    cgstRate: String(item.cgstRate ?? 0),
+    cgstAmount: item.cgstAmount ?? 0,
+    sgstRate: String(item.sgstRate ?? 0),
+    sgstAmount: item.sgstAmount ?? 0,
+    lineTotal: item.lineTotal ?? 0
+  };
+
+  const qty = Number(row.qty) || 0;
+  const rate = Number(row.rate) || 0;
+  const discountPercentage = Number(row.discountPercentage) || 0;
+  const cgstRate = Number(row.cgstRate) || 0;
+  const sgstRate = Number(row.sgstRate) || 0;
+  const baseAmount = qty * rate;
+  const discountAmount = (baseAmount * discountPercentage) / 100;
+  const taxableAmount = baseAmount - discountAmount;
+  const cgstAmount = (taxableAmount * cgstRate) / 100;
+  const sgstAmount = (taxableAmount * sgstRate) / 100;
+  const lineTotal = taxableAmount + cgstAmount + sgstAmount;
+  const round = (n: number) => Math.round(n * 100) / 100;
+
+  return {
+    ...row,
+    discountAmount: round(discountAmount),
+    taxableAmount: round(taxableAmount),
+    cgstAmount: round(cgstAmount),
+    sgstAmount: round(sgstAmount),
+    lineTotal: round(lineTotal)
+  };
 };
 
 export default function QuotationForm({
@@ -56,65 +80,27 @@ export default function QuotationForm({
   onSubmit,
   initialData,
   customers,
-  contactPersons,
   paymentTerms,
   bankAccounts,
   items
 }: QuotationFormProps) {
-  const [form, setForm] = useState({
-    customerId: '',
-    contactPersonId: '',
-    gstNo: '',
-    quoteDate: new Date().toISOString().split('T')[0],
-    expiryDate: '',
-    paymentTermId: '',
-    bankAccountId: '',
-    quoteType: 'GOODS',
-    termsAndConditions: '',
-    shippingCharge: 0
-  });
+  const [form, setForm] = useState(defaultForm);
+  const [lineItems, setLineItems] = useState<QuotationLineItemRow[]>([blankLineItem()]);
 
-  const [lineItems, setLineItems] = useState<LineItem[]>([{ ...blankLineItem }]);
-  const [totals, setTotals] = useState({
-    grossAmount: 0,
-    cgstAmount: 0,
-    sgstAmount: 0,
-    igstAmount: 0,
-    grandTotal: 0
-  });
+  const selectedCustomer = useMemo(
+    () => customers.find(c => String(c.id) === String(form.customerId)),
+    [customers, form.customerId]
+  );
 
-  // Calculate line item totals
-  const calculateLineItem = (item: LineItem) => {
-    const qty = item.qty || 0;
-    const rate = item.rate || 0;
-    const discountPercentage = item.discountPercentage || 0;
+  const contactPersonOptions = useMemo(() => {
+    const list = selectedCustomer?.contactPersons ?? [];
+    return list.map((c: any) => ({ key: c.name, value: c.id }));
+  }, [selectedCustomer]);
 
-    let baseAmount = qty * rate;
-    let discountAmount = (baseAmount * discountPercentage) / 100;
-    let taxableAmount = baseAmount - discountAmount;
-
-    let cgstRate = item.cgstRate || 0;
-    let sgstRate = item.sgstRate || 0;
-
-    let cgstAmount = (taxableAmount * cgstRate) / 100;
-    let sgstAmount = (taxableAmount * sgstRate) / 100;
-
-    let lineTotal = taxableAmount + cgstAmount + sgstAmount;
-
-    return {
-      discountAmount: Math.round(discountAmount * 100) / 100,
-      taxableAmount: Math.round(taxableAmount * 100) / 100,
-      cgstAmount: Math.round(cgstAmount * 100) / 100,
-      sgstAmount: Math.round(sgstAmount * 100) / 100,
-      lineTotal: Math.round(lineTotal * 100) / 100
-    };
-  };
-
-  // Calculate totals when line items change
-  useEffect(() => {
-    let grossAmount = 0;
+  const totals = useMemo(() => {
     let cgstAmount = 0;
     let sgstAmount = 0;
+    let grossAmount = 0;
 
     lineItems.forEach(item => {
       grossAmount += item.lineTotal || 0;
@@ -122,88 +108,105 @@ export default function QuotationForm({
       sgstAmount += item.sgstAmount || 0;
     });
 
-    const grandTotal = grossAmount + (form.shippingCharge || 0);
+    const shipping = Number(form.shippingCharge) || 0;
+    const grandTotal = grossAmount + shipping;
 
-    setTotals({
+    return {
       grossAmount: Math.round(grossAmount * 100) / 100,
       cgstAmount: Math.round(cgstAmount * 100) / 100,
       sgstAmount: Math.round(sgstAmount * 100) / 100,
-      igstAmount: 0,
       grandTotal: Math.round(grandTotal * 100) / 100
-    });
+    };
   }, [lineItems, form.shippingCharge]);
 
-  // Load initial data if editing
   useEffect(() => {
+    if (!show) return;
+
     if (initialData) {
       setForm({
-        customerId: initialData.customerId || '',
-        contactPersonId: initialData.contactPersonId || '',
-        gstNo: initialData.gstNo || '',
-        quoteDate: initialData.quoteDate ? new Date(initialData.quoteDate).toISOString().split('T')[0] : '',
-        expiryDate: initialData.expiryDate ? new Date(initialData.expiryDate).toISOString().split('T')[0] : '',
-        paymentTermId: initialData.paymentTermId || '',
-        bankAccountId: initialData.bankAccountId || '',
-        quoteType: initialData.quoteType || 'GOODS',
-        termsAndConditions: initialData.termsAndConditions || '',
-        shippingCharge: initialData.shippingCharge || 0
+        customerId: String(initialData.customerId ?? ''),
+        contactPersonId: initialData.contactPersonId ? String(initialData.contactPersonId) : '',
+        gstNo: initialData.gstNo ?? '',
+        quoteDate: initialData.quoteDate
+          ? new Date(initialData.quoteDate).toISOString().split('T')[0]
+          : defaultForm().quoteDate,
+        expiryDate: initialData.expiryDate
+          ? new Date(initialData.expiryDate).toISOString().split('T')[0]
+          : '',
+        paymentTermId: initialData.paymentTermId ? String(initialData.paymentTermId) : '',
+        bankAccountId: initialData.bankAccountId ? String(initialData.bankAccountId) : '',
+        quoteType: initialData.quoteType ?? 'GOODS',
+        termsAndConditions: initialData.termsAndConditions ?? '',
+        shippingCharge: String(initialData.shippingCharge ?? 0)
       });
 
-      if (initialData.lineItems && initialData.lineItems.length > 0) {
-        setLineItems(initialData.lineItems);
+      if (initialData.lineItems?.length) {
+        setLineItems(initialData.lineItems.map(mapLineItemFromApi));
+      } else {
+        setLineItems([blankLineItem()]);
       }
+    } else {
+      setForm(defaultForm());
+      setLineItems([blankLineItem()]);
     }
   }, [initialData, show]);
 
-  const handleFormChange = (e: any) => {
-    const { name, value } = e.target;
-    setForm(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
+  const handleChange = (key: string, value: string) => {
+    setForm(prev => {
+      const next = { ...prev, [key]: value };
 
-  const handleLineItemChange = (index: number, field: string, value: any) => {
-    const newLineItems = [...lineItems];
-    let item: any = { ...newLineItems[index], [field]: value };
+      if (key === 'customerId') {
+        const customer = customers.find(c => String(c.id) === String(value));
+        const billingGst =
+          customer?.addresses?.find((a: any) => a.type === 'BILLING')?.gstNo ||
+          customer?.addresses?.[0]?.gstNo ||
+          '';
+        next.contactPersonId = '';
+        next.gstNo = billingGst || next.gstNo;
+      }
 
-    // If qty, rate, or discount changed, recalculate
-    if (['qty', 'rate', 'discountPercentage', 'cgstRate', 'sgstRate'].includes(field)) {
-      const calculations = calculateLineItem(item);
-      item = { ...item, ...calculations };
-    }
-
-    newLineItems[index] = item;
-    setLineItems(newLineItems);
-  };
-
-  const handleAddLineItem = () => {
-    setLineItems([...lineItems, { ...blankLineItem }]);
-  };
-
-  const handleRemoveLineItem = (index: number) => {
-    if (lineItems.length > 1) {
-      setLineItems(lineItems.filter((_, i) => i !== index));
-    }
+      return next;
+    });
   };
 
   const handleSubmit = () => {
+    if (!form.customerId || !form.quoteDate || !form.expiryDate) {
+      alert('Please fill required fields: Customer, Quote Date, and Expiry Date.');
+      return;
+    }
+
+    const validLines = lineItems.filter(row => row.itemId && Number(row.qty) > 0);
+    if (!validLines.length) {
+      alert('Add at least one line item with quantity.');
+      return;
+    }
+
     onSubmit({
-      ...form,
       customerId: Number(form.customerId),
       contactPersonId: form.contactPersonId ? Number(form.contactPersonId) : null,
+      gstNo: form.gstNo || null,
+      quoteDate: form.quoteDate,
+      expiryDate: form.expiryDate,
       paymentTermId: form.paymentTermId ? Number(form.paymentTermId) : null,
       bankAccountId: form.bankAccountId ? Number(form.bankAccountId) : null,
-      shippingCharge: Number(form.shippingCharge),
-      lineItems: lineItems.map(item => ({
-        ...item,
+      quoteType: form.quoteType,
+      termsAndConditions: form.termsAndConditions || null,
+      shippingCharge: Number(form.shippingCharge) || 0,
+      lineItems: validLines.map(item => ({
         itemId: Number(item.itemId),
+        description: item.description,
         unitId: item.unitId ? Number(item.unitId) : null,
+        hsnCode: item.hsnCode || null,
         qty: Number(item.qty),
         rate: Number(item.rate),
-        discountPercentage: Number(item.discountPercentage),
-        cgstRate: Number(item.cgstRate),
-        sgstRate: Number(item.sgstRate)
+        discountPercentage: Number(item.discountPercentage) || 0,
+        discountAmount: item.discountAmount,
+        taxableAmount: item.taxableAmount,
+        cgstRate: Number(item.cgstRate) || 0,
+        cgstAmount: item.cgstAmount,
+        sgstRate: Number(item.sgstRate) || 0,
+        sgstAmount: item.sgstAmount,
+        lineTotal: item.lineTotal
       }))
     });
   };
@@ -211,296 +214,130 @@ export default function QuotationForm({
   return (
     <Modal show={show} onHide={onHide} size="xl" scrollable>
       <Modal.Header closeButton>
-        <Modal.Title>{initialData ? 'Edit Quotation' : 'Create New Quotation'}</Modal.Title>
+        <Modal.Title>{initialData ? 'Edit Quotation' : 'Create Quotation'}</Modal.Title>
       </Modal.Header>
 
       <Modal.Body>
-        <Form>
-          {/* Header Section */}
-          <div className="quotation-section">
-            <h5>Quotation Details</h5>
-            <Row className="mb-3">
-              <Col md={6}>
-                <label className="form-label">Customer *</label>
-                <Select
-                  name="customerId"
-                  value={form.customerId}
-                  onChange={handleFormChange}
-                  options={customers.map(c => ({ value: c.id, label: c.companyName }))}
-                  required
-                />
-              </Col>
-              <Col md={6}>
-                <label className="form-label">Contact Person</label>
-                <Select
-                  name="contactPersonId"
-                  value={form.contactPersonId}
-                  onChange={handleFormChange}
-                  options={contactPersons.map(c => ({ value: c.id, label: c.name }))}
-                />
-              </Col>
-            </Row>
-
-            <Row className="mb-3">
-              <Col md={6}>
-                <label className="form-label">GST No.</label>
-                <Input
-                  type="text"
-                  name="gstNo"
-                  value={form.gstNo}
-                  onChange={handleFormChange}
-                />
-              </Col>
-              <Col md={6}>
-                <label className="form-label">Quote Type *</label>
-                <Select
-                  name="quoteType"
-                  value={form.quoteType}
-                  onChange={handleFormChange}
-                  options={[
-                    { value: 'GOODS', label: 'Goods' },
-                    { value: 'SERVICE', label: 'Service' }
-                  ]}
-                  required
-                />
-              </Col>
-            </Row>
-
-            <Row className="mb-3">
-              <Col md={6}>
-                <label className="form-label">Quote Date *</label>
-                <Input
-                  type="date"
-                  name="quoteDate"
-                  value={form.quoteDate}
-                  onChange={handleFormChange}
-                  required
-                />
-              </Col>
-              <Col md={6}>
-                <label className="form-label">Expiry Date *</label>
-                <Input
-                  type="date"
-                  name="expiryDate"
-                  value={form.expiryDate}
-                  onChange={handleFormChange}
-                  required
-                />
-              </Col>
-            </Row>
-
-            <Row className="mb-3">
-              <Col md={6}>
-                <label className="form-label">Payment Terms</label>
-                <Select
-                  name="paymentTermId"
-                  value={form.paymentTermId}
-                  onChange={handleFormChange}
-                  options={paymentTerms.map(pt => ({ value: pt.id, label: pt.term_name }))}
-                />
-              </Col>
-              <Col md={6}>
-                <label className="form-label">Bank Details</label>
-                <Select
-                  name="bankAccountId"
-                  value={form.bankAccountId}
-                  onChange={handleFormChange}
-                  options={bankAccounts.map(ba => ({
-                    value: ba.id,
-                    label: `${ba.bank_name} - ${ba.account_number}`
-                  }))}
-                />
-              </Col>
-            </Row>
+        <section className="quotation-form-section">
+          <h5>Quotation Details</h5>
+          <div className="form-controller">
+            <Select
+              placeholder="Customer *"
+              value={form.customerId}
+              options={customers.map(c => ({ key: c.companyName, value: c.id }))}
+              onChange={value => handleChange('customerId', String(value))}
+            />
+            <Select
+              placeholder="Contact Person"
+              value={form.contactPersonId}
+              options={contactPersonOptions}
+              onChange={value => handleChange('contactPersonId', String(value))}
+            />
+            <Input placeholder="GST No." value={form.gstNo} onChange={value => handleChange('gstNo', value)} />
           </div>
 
-          {/* Line Items Section */}
-          <div className="quotation-section mt-4">
-            <h5>Line Items</h5>
-            <div className="table-responsive">
-              <Table striped bordered hover size="sm" className="quotation-table">
-                <thead>
-                  <tr>
-                    <th>Item</th>
-                    <th>Description</th>
-                    <th>Unit</th>
-                    <th>HSN</th>
-                    <th>Qty</th>
-                    <th>Rate</th>
-                    <th>Disc %</th>
-                    <th>CGST %</th>
-                    <th>SGST %</th>
-                    <th>Line Total</th>
-                    <th>Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {lineItems.map((item, index) => (
-                    <tr key={index}>
-                      <td>
-                        <Select
-                          value={item.itemId}
-                          onChange={(e) => {
-                            const selectedItem = items.find(i => i.id === Number(e.target.value));
-                            handleLineItemChange(index, 'itemId', e.target.value);
-                            if (selectedItem) {
-                              handleLineItemChange(index, 'hsnCode', selectedItem.hsn?.hsnCode || '');
-                              handleLineItemChange(index, 'cgstRate', selectedItem.gstSlab || 0);
-                              handleLineItemChange(index, 'sgstRate', selectedItem.gstSlab || 0);
-                            }
-                          }}
-                          options={items.map(i => ({
-                            value: i.id,
-                            label: `${i.itemName} (${i.id})`
-                          }))}
-                        />
-                      </td>
-                      <td>
-                        <Input
-                          type="text"
-                          value={item.description}
-                          onChange={(e) => handleLineItemChange(index, 'description', e.target.value)}
-                          placeholder="Description"
-                        />
-                      </td>
-                      <td>
-                        <Input
-                          type="text"
-                          value={item.unitId}
-                          onChange={(e) => handleLineItemChange(index, 'unitId', e.target.value)}
-                          placeholder="Unit"
-                        />
-                      </td>
-                      <td>
-                        <span>{item.hsnCode}</span>
-                      </td>
-                      <td>
-                        <Input
-                          type="number"
-                          value={item.qty}
-                          onChange={(e) => handleLineItemChange(index, 'qty', e.target.value)}
-                          placeholder="Qty"
-                        />
-                      </td>
-                      <td>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          value={item.rate}
-                          onChange={(e) => handleLineItemChange(index, 'rate', e.target.value)}
-                          placeholder="Rate"
-                        />
-                      </td>
-                      <td>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          value={item.discountPercentage}
-                          onChange={(e) => handleLineItemChange(index, 'discountPercentage', e.target.value)}
-                          placeholder="Disc %"
-                        />
-                      </td>
-                      <td>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          value={item.cgstRate}
-                          onChange={(e) => handleLineItemChange(index, 'cgstRate', e.target.value)}
-                          placeholder="CGST %"
-                        />
-                      </td>
-                      <td>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          value={item.sgstRate}
-                          onChange={(e) => handleLineItemChange(index, 'sgstRate', e.target.value)}
-                          placeholder="SGST %"
-                        />
-                      </td>
-                      <td className="fw-bold">{item.lineTotal.toFixed(2)}</td>
-                      <td>
-                        <BootstrapButton
-                          variant="danger"
-                          size="sm"
-                          onClick={() => handleRemoveLineItem(index)}
-                          disabled={lineItems.length === 1}
-                        >
-                          Remove
-                        </BootstrapButton>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </Table>
-            </div>
-            <BootstrapButton variant="primary" size="sm" onClick={handleAddLineItem} className="mt-2">
-              + Add Line Item
-            </BootstrapButton>
-          </div>
-
-          {/* Totals Section */}
-          <div className="quotation-section mt-4">
-            <h5>Totals</h5>
-            <Row>
-              <Col md={6}>
-                <Row className="mb-2">
-                  <Col xs={8}><strong>Gross Amount:</strong></Col>
-                  <Col xs={4} className="text-end">{totals.grossAmount.toFixed(2)}</Col>
-                </Row>
-                <Row className="mb-2">
-                  <Col xs={8}><strong>CGST (18%):</strong></Col>
-                  <Col xs={4} className="text-end">{totals.cgstAmount.toFixed(2)}</Col>
-                </Row>
-                <Row className="mb-2">
-                  <Col xs={8}><strong>SGST (18%):</strong></Col>
-                  <Col xs={4} className="text-end">{totals.sgstAmount.toFixed(2)}</Col>
-                </Row>
-              </Col>
-              <Col md={6}>
-                <Row className="mb-2">
-                  <Col xs={8}><strong>Shipping Charge:</strong></Col>
-                  <Col xs={4}>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={form.shippingCharge}
-                      onChange={(e) => handleFormChange({ target: { name: 'shippingCharge', value: e.target.value } })}
-                    />
-                  </Col>
-                </Row>
-              </Col>
-            </Row>
-            <Row className="mt-3 border-top pt-2">
-              <Col xs={8}><h5>Grand Total:</h5></Col>
-              <Col xs={4} className="text-end"><h5>{totals.grandTotal.toFixed(2)}</h5></Col>
-            </Row>
-          </div>
-
-          {/* Terms & Conditions Section */}
-          <div className="quotation-section mt-4">
-            <h5>Terms & Conditions</h5>
-            <Form.Group>
-              <Form.Control
-                as="textarea"
-                rows={3}
-                name="termsAndConditions"
-                value={form.termsAndConditions}
-                onChange={handleFormChange}
-                placeholder="Enter terms and conditions"
+          <div className="form-controller">
+            <Select
+              placeholder="Quote Type *"
+              value={form.quoteType}
+              options={[
+                { key: 'Goods', value: 'GOODS' },
+                { key: 'Service', value: 'SERVICE' }
+              ]}
+              onChange={value => handleChange('quoteType', String(value))}
+            />
+            <label className="date-field">
+              <span>Quote Date *</span>
+              <input
+                type="date"
+                className="input"
+                value={form.quoteDate}
+                onChange={e => handleChange('quoteDate', e.target.value)}
               />
-            </Form.Group>
+            </label>
+            <label className="date-field">
+              <span>Expiry Date *</span>
+              <input
+                type="date"
+                className="input"
+                value={form.expiryDate}
+                onChange={e => handleChange('expiryDate', e.target.value)}
+              />
+            </label>
           </div>
-        </Form>
+
+          <div className="form-controller">
+            <Select
+              placeholder="Payment Terms"
+              value={form.paymentTermId}
+              options={paymentTerms.map(pt => ({ key: pt.term_name, value: pt.id }))}
+              onChange={value => handleChange('paymentTermId', String(value))}
+            />
+            <Select
+              placeholder="Bank Account"
+              value={form.bankAccountId}
+              options={bankAccounts.map(ba => ({
+                key: `${ba.bank_name} - ${ba.account_number}`,
+                value: ba.id
+              }))}
+              onChange={value => handleChange('bankAccountId', String(value))}
+            />
+          </div>
+        </section>
+
+        <section className="quotation-form-section">
+          <h5>Line Items</h5>
+          <QuotationLineItems rows={lineItems} items={items} onChange={setLineItems} />
+        </section>
+
+        <section className="quotation-form-section">
+          <h5>Totals</h5>
+          <div className="quotation-totals">
+            <div className="quotation-totals-row">
+              <span>Subtotal (incl. tax)</span>
+              <strong>₹{totals.grossAmount.toFixed(2)}</strong>
+            </div>
+            <div className="quotation-totals-row">
+              <span>CGST</span>
+              <strong>₹{totals.cgstAmount.toFixed(2)}</strong>
+            </div>
+            <div className="quotation-totals-row">
+              <span>SGST</span>
+              <strong>₹{totals.sgstAmount.toFixed(2)}</strong>
+            </div>
+            <div className="quotation-totals-row">
+              <span>Shipping Charge</span>
+              <Input
+                placeholder="0"
+                type="number"
+                value={form.shippingCharge}
+                onChange={value => handleChange('shippingCharge', value)}
+              />
+            </div>
+            <div className="quotation-totals-row grand-total">
+              <span>Grand Total</span>
+              <strong>₹{totals.grandTotal.toFixed(2)}</strong>
+            </div>
+          </div>
+        </section>
+
+        <section className="quotation-form-section">
+          <h5>Terms & Conditions</h5>
+          <textarea
+            className="quotation-textarea"
+            rows={4}
+            placeholder="Enter terms and conditions"
+            value={form.termsAndConditions}
+            onChange={e => handleChange('termsAndConditions', e.target.value)}
+          />
+        </section>
       </Modal.Body>
 
-      <Modal.Footer>
-        <BootstrapButton variant="secondary" onClick={onHide}>
-          Close
-        </BootstrapButton>
-        <BootstrapButton variant="primary" onClick={handleSubmit}>
-          {initialData ? 'Update' : 'Create'} Quotation
-        </BootstrapButton>
+      <Modal.Footer className="quotation-modal-footer">
+        <button type="button" className="cancel-button" onClick={onHide}>
+          Cancel
+        </button>
+        <Button text={initialData ? 'Update Quotation' : 'Save Quotation'} onClick={handleSubmit} />
       </Modal.Footer>
     </Modal>
   );
