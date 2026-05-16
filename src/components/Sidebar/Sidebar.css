@@ -2,6 +2,7 @@
     display: flex;
     justify-content: center;
     align-items: center;
+    flex-shrink: 0;
     padding: 5px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     height: 50px;
@@ -58,6 +59,7 @@
 
 .menu-item-container {
     position: relative;
+    z-index: 1000;
 }
 
 .menu-item-container:hover > .second-level-menu {
@@ -66,12 +68,13 @@
 }
 
 .sidebar-footer {
+    flex-shrink: 0;
     margin-top: auto;
     padding: 10px;
     text-align: center;
-    position: absolute;
-    bottom: 10px;
     width: 100%;
+    border-top: 1px solid #ccc;
+    background: #eee;
 }
 
 .sidebar-footer .login-user-details {
@@ -132,4 +135,21 @@
     display: flex;
     justify-content: center;
     align-items: center;
+}
+
+.sidebar-footer .logout-btn {
+    width: 100%;
+    margin-top: 8px;
+    padding: 6px 10px;
+    border: 1px solid #3659c9;
+    border-radius: 5px;
+    background-color: #fff;
+    color: #3659c9;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.sidebar-footer .logout-btn:hover {
+    background-color: #3659c9;
+    color: #fff;
 }

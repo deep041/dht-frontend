@@ -30,6 +30,16 @@ API.interceptors.response.use(
   },
   (error) => {
     NProgress.done();
+
+    if (error.response?.status === 401 || error.response?.status === 403) {
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+
+      if (window.location.pathname !== "/login") {
+        window.location.href = "/login";
+      }
+    }
+
     return Promise.reject(error);
   }
 );

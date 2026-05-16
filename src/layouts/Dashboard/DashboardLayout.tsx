@@ -6,11 +6,11 @@ import Sidebar from '../../components/Sidebar/Sidebar';
 export default function DashboardLayout() {
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh" }}>
+    <div style={{ display: "flex", minHeight: "100vh", maxHeight: "100vh", overflow: "hidden" }}>
       
       <Sidebar />
 
-      <div style={{ flex: 1 }}>
+      <div style={{ flex: 1, overflow: "auto" }}>
         {/* <Header /> */}
         <Outlet />
       </div>

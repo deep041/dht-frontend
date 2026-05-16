@@ -24,3 +24,13 @@
     justify-content: space-between;
     gap: 5px;
 }
+
+.login-page .login-form .login-submit-btn {
+    margin-top: 10px;
+    width: 100%;
+}
+
+.login-page .login-form .login-submit-btn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
