@@ -3,6 +3,7 @@ import { Modal } from 'react-bootstrap';
 import Button from '../../../components/Button/Button';
 import Input from '../../../components/Input/Input';
 import Select from '../../../components/Select/Select';
+import { getCustomerContactPersons } from '../../masters/customer/Customer.api';
 import QuotationLineItems, {
   blankLineItem,
   type QuotationLineItemRow
@@ -86,16 +87,13 @@ export default function QuotationForm({
 }: QuotationFormProps) {
   const [form, setForm] = useState(defaultForm);
   const [lineItems, setLineItems] = useState<QuotationLineItemRow[]>([blankLineItem()]);
+  const [contactPersons, setContactPersons] = useState<any[]>([]);
+  const [loadingContactPersons, setLoadingContactPersons] = useState(false);
 
-  const selectedCustomer = useMemo(
-    () => customers.find(c => String(c.id) === String(form.customerId)),
-    [customers, form.customerId]
+  const contactPersonOptions = useMemo(
+    () => contactPersons.map((c: any) => ({ key: c.name, value: c.id })),
+    [contactPersons]
   );
-
-  const contactPersonOptions = useMemo(() => {
-    const list = selectedCustomer?.contactPersons ?? [];
-    return list.map((c: any) => ({ key: c.name, value: c.id }));
-  }, [selectedCustomer]);
 
   const totals = useMemo(() => {
     let cgstAmount = 0;
@@ -151,6 +149,36 @@ export default function QuotationForm({
     }
   }, [initialData, show]);
 
+  useEffect(() => {
+    if (!show || !form.customerId) {
+      setContactPersons([]);
+      return;
+    }
+
+    let cancelled = false;
+
+    const fetchContactPersons = async () => {
+      setLoadingContactPersons(true);
+      try {
+        const response = await getCustomerContactPersons(form.customerId);
+        if (!cancelled) {
+          setContactPersons(response.data || []);
+        }
+      } catch (error) {
+        console.error('Error fetching contact persons:', error);
+        if (!cancelled) setContactPersons([]);
+      } finally {
+        if (!cancelled) setLoadingContactPersons(false);
+      }
+    };
+
+    fetchContactPersons();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [form.customerId, show]);
+
   const handleChange = (key: string, value: string) => {
     setForm(prev => {
       const next = { ...prev, [key]: value };
@@ -162,7 +190,7 @@ export default function QuotationForm({
           customer?.addresses?.[0]?.gstNo ||
           '';
         next.contactPersonId = '';
-        next.gstNo = billingGst || next.gstNo;
+        next.gstNo = billingGst || '';
       }
 
       return next;
@@ -228,7 +256,7 @@ export default function QuotationForm({
               onChange={value => handleChange('customerId', String(value))}
             />
             <Select
-              placeholder="Contact Person"
+              placeholder={loadingContactPersons ? 'Loading contacts…' : 'Contact Person'}
               value={form.contactPersonId}
               options={contactPersonOptions}
               onChange={value => handleChange('contactPersonId', String(value))}
@@ -236,7 +264,7 @@ export default function QuotationForm({
             <Input placeholder="GST No." value={form.gstNo} onChange={value => handleChange('gstNo', value)} />
           </div>
 
-          <div className="form-controller">
+          <div className="form-controller form-controller-compact">
             <Select
               placeholder="Quote Type *"
               value={form.quoteType}
@@ -246,24 +274,20 @@ export default function QuotationForm({
               ]}
               onChange={value => handleChange('quoteType', String(value))}
             />
-            <label className="date-field">
-              <span>Quote Date *</span>
-              <input
-                type="date"
-                className="input"
-                value={form.quoteDate}
-                onChange={e => handleChange('quoteDate', e.target.value)}
-              />
-            </label>
-            <label className="date-field">
-              <span>Expiry Date *</span>
-              <input
-                type="date"
-                className="input"
-                value={form.expiryDate}
-                onChange={e => handleChange('expiryDate', e.target.value)}
-              />
-            </label>
+            <input
+              type="date"
+              className="input input-date"
+              title="Quote Date"
+              value={form.quoteDate}
+              onChange={e => handleChange('quoteDate', e.target.value)}
+            />
+            <input
+              type="date"
+              className="input input-date"
+              title="Expiry Date"
+              value={form.expiryDate}
+              onChange={e => handleChange('expiryDate', e.target.value)}
+            />
           </div>
 
           <div className="form-controller">
@@ -290,9 +314,20 @@ export default function QuotationForm({
           <QuotationLineItems rows={lineItems} items={items} onChange={setLineItems} />
         </section>
 
-        <section className="quotation-form-section">
-          <h5>Totals</h5>
-          <div className="quotation-totals">
+        <section className="quotation-form-section quotation-terms-totals-row">
+          <div className="quotation-terms-col">
+            <h5>Terms & Conditions</h5>
+            <textarea
+              className="quotation-textarea"
+              rows={6}
+              placeholder="Enter terms and conditions"
+              value={form.termsAndConditions}
+              onChange={e => handleChange('termsAndConditions', e.target.value)}
+            />
+          </div>
+          <div className="quotation-totals-col">
+            <h5>Totals</h5>
+            <div className="quotation-totals">
             <div className="quotation-totals-row">
               <span>Subtotal (incl. tax)</span>
               <strong>₹{totals.grossAmount.toFixed(2)}</strong>
@@ -319,17 +354,7 @@ export default function QuotationForm({
               <strong>₹{totals.grandTotal.toFixed(2)}</strong>
             </div>
           </div>
-        </section>
-
-        <section className="quotation-form-section">
-          <h5>Terms & Conditions</h5>
-          <textarea
-            className="quotation-textarea"
-            rows={4}
-            placeholder="Enter terms and conditions"
-            value={form.termsAndConditions}
-            onChange={e => handleChange('termsAndConditions', e.target.value)}
-          />
+          </div>
         </section>
       </Modal.Body>
 

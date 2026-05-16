@@ -9,6 +9,8 @@ import ZonePage from "../features/crm/zone/Zone";
 import SubZonePage from "../features/crm/sub-zone/Sub-Zone";
 import LeadsPage from "../features/crm/leads/Leads";
 import QuotationPage from "../features/sales/quotation/Quotation";
+import SalesOrderPage from "../features/sales/sales-order/SalesOrder";
+import TaxInvoicePage from "../features/sales/tax-invoice/TaxInvoice";
 import DepartmentPage from "../features/masters/department/Department";
 import PlantUnitPage from "../features/masters/store/plant-units/PlantUnits";
 import WarehousePage from "../features/masters/store/warehouse/Warehouse";
@@ -26,6 +28,7 @@ import GroupPage from "../features/item-master/group/group";
 import SubGroupPage from "../features/item-master/sub-group/sub-group";
 import RawMaterialPage from "../features/item-master/raw-material/raw-material";
 import ItemPage from "../features/item-master/item/item";
+import PurchaseIndentPage from "../features/purchase/purchase-indent/PurchaseIndent";
 
 export default function AppRoutes() {
     return (
@@ -46,6 +49,8 @@ export default function AppRoutes() {
                     </Route>
                     <Route path="sales">
                         <Route path="quotation" element={<QuotationPage />} />
+                        <Route path="sales-order" element={<SalesOrderPage />} />
+                        <Route path="tax-invoice" element={<TaxInvoicePage />} />
                     </Route>
                     <Route path="master">
                         <Route path="party-groups" element={<PartyGroupPage />} />
@@ -69,6 +74,9 @@ export default function AppRoutes() {
                         <Route path="sub-group" element={<SubGroupPage />} />
                         <Route path="raw-material" element={<RawMaterialPage />} />
                         <Route path="item" element={<ItemPage />} />
+                    </Route>
+                    <Route path="purchase">
+                        <Route path="purchase-indent" element={<PurchaseIndentPage />} />
                     </Route>
                 </Route>
             </Routes>

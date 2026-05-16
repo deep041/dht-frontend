@@ -2,20 +2,24 @@ import { useEffect, useState } from 'react';
 import { Modal } from 'react-bootstrap';
 import Button from '../../../components/Button/Button';
 import {
-  getQuotations,
-  getQuotationById,
-  createQuotation,
-  updateQuotation,
-  deleteQuotation
-} from './Quotation.api';
+  getTaxInvoices,
+  getTaxInvoiceById,
+  createTaxInvoice,
+  updateTaxInvoice,
+  deleteTaxInvoice
+} from './TaxInvoice.api';
 import { getCustomers } from '../../masters/customer/Customer.api';
 import { getPaymentTerms } from '../../masters/payment-terms/PaymentTerms.api';
+import { getPlantUnit } from '../../masters/store/plant-units/PlantUnits.api';
+import { getWarehouses } from '../../masters/store/warehouse/Warehouse.api';
 import { getBanks } from '../../masters/banks/Banks.api';
 import { getItems } from '../../item-master/item/item.api';
+import { getSalesOrders } from '../sales-order/SalesOrder.api';
 import { getCompanyDetails } from '../../masters/company-details/CompanyDetails.api';
-import QuotationForm from './QuotationForm';
-import { printQuotation } from './quotationPrint';
-import './Quotation.css';
+import TaxInvoiceForm from './TaxInvoiceForm';
+import { printTaxInvoice } from './taxInvoicePrint';
+import '../quotation/Quotation.css';
+import './TaxInvoice.css';
 
 const formatDate = (value: string) => {
   if (!value) return '—';
@@ -24,36 +28,36 @@ const formatDate = (value: string) => {
 
 const formatCurrency = (value: number) => `₹${(value ?? 0).toFixed(2)}`;
 
-export default function QuotationPage() {
+export default function TaxInvoicePage() {
   const [showForm, setShowForm] = useState(false);
   const [showView, setShowView] = useState(false);
   const [tableData, setTableData] = useState<any[]>([]);
   const [customers, setCustomers] = useState<any[]>([]);
   const [paymentTerms, setPaymentTerms] = useState<any[]>([]);
+  const [plantUnits, setPlantUnits] = useState<any[]>([]);
+  const [warehouses, setWarehouses] = useState<any[]>([]);
   const [bankAccounts, setBankAccounts] = useState<any[]>([]);
   const [items, setItems] = useState<any[]>([]);
-  const [editingQuotation, setEditingQuotation] = useState<any>(null);
-  const [viewQuotation, setViewQuotation] = useState<any>(null);
+  const [salesOrders, setSalesOrders] = useState<any[]>([]);
+  const [editingInvoice, setEditingInvoice] = useState<any>(null);
+  const [viewInvoice, setViewInvoice] = useState<any>(null);
   const [loading, setLoading] = useState(false);
 
-  const fetchQuotations = async () => {
+  const fetchTaxInvoices = async () => {
     try {
       setLoading(true);
-      const response = await getQuotations();
+      const response = await getTaxInvoices();
       const rows = response.data || [];
       setTableData(
-        rows.map((q: any) => ({
-          ...q,
-          customerName: q.customer?.companyName ?? '—',
-          quoteDateLabel: formatDate(q.quoteDate),
-          expiryDateLabel: formatDate(q.expiryDate),
-          grossAmountLabel: formatCurrency(q.grossAmount),
-          grandTotalLabel: formatCurrency(q.grandTotal),
-          quoteTypeLabel: q.quoteType === 'SERVICE' ? 'Service' : 'Goods'
+        rows.map((inv: any) => ({
+          ...inv,
+          customerName: inv.customer?.companyName ?? '—',
+          invoiceDateLabel: formatDate(inv.invoiceDate),
+          grandTotalLabel: formatCurrency(inv.grandTotal)
         }))
       );
     } catch (error) {
-      console.error('Error fetching quotations:', error);
+      console.error('Error fetching tax invoices:', error);
     } finally {
       setLoading(false);
     }
@@ -61,57 +65,64 @@ export default function QuotationPage() {
 
   const fetchMasterData = async () => {
     try {
-      const [customersRes, paymentRes, banksRes, itemsRes] = await Promise.all([
-        getCustomers(),
-        getPaymentTerms(),
-        getBanks(),
-        getItems()
-      ]);
+      const [customersRes, paymentRes, plantRes, warehouseRes, banksRes, itemsRes, ordersRes] =
+        await Promise.all([
+          getCustomers(),
+          getPaymentTerms(),
+          getPlantUnit(),
+          getWarehouses(),
+          getBanks(),
+          getItems(),
+          getSalesOrders()
+        ]);
       setCustomers(customersRes.data || []);
       setPaymentTerms(paymentRes.data || []);
+      setPlantUnits(plantRes.data || []);
+      setWarehouses(warehouseRes.data || []);
       setBankAccounts(banksRes.data || []);
       setItems(itemsRes.data || []);
+      setSalesOrders(ordersRes.data || []);
     } catch (error) {
       console.error('Error fetching master data:', error);
     }
   };
 
   useEffect(() => {
-    fetchQuotations();
+    fetchTaxInvoices();
     fetchMasterData();
   }, []);
 
   const handleCreate = () => {
-    setEditingQuotation(null);
+    setEditingInvoice(null);
     setShowForm(true);
   };
 
   const handleEdit = async (id: number) => {
     try {
-      const response = await getQuotationById(id);
-      setEditingQuotation(response.data);
+      const response = await getTaxInvoiceById(id);
+      setEditingInvoice(response.data);
       setShowForm(true);
     } catch (error) {
-      console.error('Error fetching quotation:', error);
-      alert('Could not load quotation for editing.');
+      console.error('Error fetching tax invoice:', error);
+      alert('Could not load tax invoice for editing.');
     }
   };
 
   const handleView = async (id: number) => {
     try {
-      const response = await getQuotationById(id);
-      setViewQuotation(response.data);
+      const response = await getTaxInvoiceById(id);
+      setViewInvoice(response.data);
       setShowView(true);
     } catch (error) {
-      console.error('Error fetching quotation:', error);
-      alert('Could not load quotation details.');
+      console.error('Error fetching tax invoice:', error);
+      alert('Could not load tax invoice details.');
     }
   };
 
   const handlePrint = async (id: number) => {
     try {
-      const [quotationRes, companyRes] = await Promise.all([
-        getQuotationById(id),
+      const [invoiceRes, companyRes] = await Promise.all([
+        getTaxInvoiceById(id),
         getCompanyDetails()
       ]);
       const company = companyRes?.data?.[0];
@@ -119,68 +130,66 @@ export default function QuotationPage() {
         alert('Company details not configured. Please add them under Master → Company Details.');
         return;
       }
-      printQuotation(quotationRes.data, company);
+      printTaxInvoice(invoiceRes.data, company);
     } catch (error) {
-      console.error('Error printing quotation:', error);
-      alert('Could not prepare quotation for printing.');
+      console.error('Error printing tax invoice:', error);
+      alert('Could not prepare tax invoice for printing.');
     }
   };
 
   const handleDelete = async (id: number) => {
-    if (!window.confirm('Delete this quotation?')) return;
+    if (!window.confirm('Delete this tax invoice?')) return;
     try {
-      await deleteQuotation(id);
-      await fetchQuotations();
+      await deleteTaxInvoice(id);
+      await fetchTaxInvoices();
     } catch (error) {
-      console.error('Error deleting quotation:', error);
-      alert('Error deleting quotation.');
+      console.error('Error deleting tax invoice:', error);
+      alert('Error deleting tax invoice.');
     }
   };
 
   const handleSubmit = async (formData: any) => {
     try {
-      if (editingQuotation?.id) {
-        await updateQuotation(editingQuotation.id, formData);
+      if (editingInvoice?.id) {
+        await updateTaxInvoice(editingInvoice.id, formData);
       } else {
-        await createQuotation(formData);
+        await createTaxInvoice(formData);
       }
       setShowForm(false);
-      setEditingQuotation(null);
-      await fetchQuotations();
+      setEditingInvoice(null);
+      await fetchTaxInvoices();
     } catch (error) {
-      console.error('Error saving quotation:', error);
-      alert('Error saving quotation.');
+      console.error('Error saving tax invoice:', error);
+      alert('Error saving tax invoice.');
     }
   };
 
   const closeForm = () => {
     setShowForm(false);
-    setEditingQuotation(null);
+    setEditingInvoice(null);
   };
 
   return (
     <>
       <div className="page-header-container">
-        <h2>Quotations</h2>
-        <Button text="Create Quotation" onClick={handleCreate} />
+        <h2>Tax Invoices</h2>
+        <Button text="Add Tax Invoice" onClick={handleCreate} />
       </div>
 
-      <div className="page-container quotation-page">
+      <div className="page-container quotation-page tax-invoice-page">
         {loading ? (
-          <p className="quotation-loading">Loading quotations…</p>
+          <p className="quotation-loading">Loading tax invoices…</p>
         ) : tableData.length === 0 ? (
-          <p className="quotation-empty">No quotations yet. Create your first quotation.</p>
+          <p className="quotation-empty">No tax invoices yet. Click Add Tax Invoice to create one.</p>
         ) : (
           <div className="quotation-table-wrapper">
             <table>
               <thead>
                 <tr>
-                  <th>Quote #</th>
+                  <th>Invoice No.</th>
                   <th>Customer</th>
-                  <th>Quote Date</th>
-                  <th>Expiry</th>
-                  <th>Type</th>
-                  <th>Gross</th>
+                  <th>Invoice Date</th>
+                  <th>Ref. SO</th>
                   <th>Grand Total</th>
                   <th>Actions</th>
                 </tr>
@@ -188,12 +197,10 @@ export default function QuotationPage() {
               <tbody>
                 {tableData.map(row => (
                   <tr key={row.id}>
-                    <td>{row.id}</td>
+                    <td>{row.invoiceNo}</td>
                     <td>{row.customerName}</td>
-                    <td>{row.quoteDateLabel}</td>
-                    <td>{row.expiryDateLabel}</td>
-                    <td>{row.quoteTypeLabel}</td>
-                    <td>{row.grossAmountLabel}</td>
+                    <td>{row.invoiceDateLabel}</td>
+                    <td>{row.refSalesOrderId ? `#${row.refSalesOrderId}` : '—'}</td>
                     <td>{row.grandTotalLabel}</td>
                     <td>
                       <div className="quotation-row-actions">
@@ -219,60 +226,67 @@ export default function QuotationPage() {
         )}
       </div>
 
-      <QuotationForm
+      <TaxInvoiceForm
         show={showForm}
         onHide={closeForm}
         onSubmit={handleSubmit}
-        initialData={editingQuotation}
+        initialData={editingInvoice}
         customers={customers}
         paymentTerms={paymentTerms}
+        plantUnits={plantUnits}
+        warehouses={warehouses}
         bankAccounts={bankAccounts}
         items={items}
+        salesOrders={salesOrders}
       />
 
       <Modal show={showView} onHide={() => setShowView(false)} size="lg" scrollable>
         <Modal.Header closeButton>
-          <Modal.Title>Quotation #{viewQuotation?.id}</Modal.Title>
+          <Modal.Title>Tax Invoice — {viewInvoice?.invoiceNo}</Modal.Title>
         </Modal.Header>
         <Modal.Body>
-          {viewQuotation && (
+          {viewInvoice && (
             <div className="quotation-view">
               <div className="quotation-view-grid">
                 <div>
                   <span className="label">Customer</span>
-                  <span>{viewQuotation.customer?.companyName ?? '—'}</span>
+                  <span>{viewInvoice.customer?.companyName ?? '—'}</span>
                 </div>
                 <div>
                   <span className="label">Contact</span>
-                  <span>{viewQuotation.contactPerson?.name ?? '—'}</span>
+                  <span>{viewInvoice.contactPerson?.name ?? '—'}</span>
                 </div>
                 <div>
                   <span className="label">GST No.</span>
-                  <span>{viewQuotation.gstNo ?? '—'}</span>
+                  <span>{viewInvoice.gstNo ?? '—'}</span>
                 </div>
                 <div>
-                  <span className="label">Quote Type</span>
-                  <span>{viewQuotation.quoteType === 'SERVICE' ? 'Service' : 'Goods'}</span>
+                  <span className="label">Invoice Date</span>
+                  <span>{formatDate(viewInvoice.invoiceDate)}</span>
                 </div>
                 <div>
-                  <span className="label">Quote Date</span>
-                  <span>{formatDate(viewQuotation.quoteDate)}</span>
+                  <span className="label">Plant Unit</span>
+                  <span>{viewInvoice.plantUnit?.unit_name ?? '—'}</span>
                 </div>
                 <div>
-                  <span className="label">Expiry Date</span>
-                  <span>{formatDate(viewQuotation.expiryDate)}</span>
+                  <span className="label">Warehouse</span>
+                  <span>{viewInvoice.warehouse?.name ?? '—'}</span>
                 </div>
                 <div>
-                  <span className="label">Payment Terms</span>
-                  <span>{viewQuotation.paymentTerms?.term_name ?? '—'}</span>
+                  <span className="label">Customer PO</span>
+                  <span>{viewInvoice.customerPoNo ?? '—'}</span>
                 </div>
                 <div>
-                  <span className="label">Bank</span>
-                  <span>
-                    {viewQuotation.bankAccount
-                      ? `${viewQuotation.bankAccount.bank_name} - ${viewQuotation.bankAccount.account_number}`
-                      : '—'}
-                  </span>
+                  <span className="label">Ref. Sales Order</span>
+                  <span>{viewInvoice.refSalesOrderId ? `#${viewInvoice.refSalesOrderId}` : '—'}</span>
+                </div>
+                <div className="quotation-view-span-2">
+                  <span className="label">Billing Address</span>
+                  <span>{viewInvoice.billingAddressText ?? '—'}</span>
+                </div>
+                <div className="quotation-view-span-2">
+                  <span className="label">Shipping Address</span>
+                  <span>{viewInvoice.shippingAddressText ?? '—'}</span>
                 </div>
               </div>
 
@@ -289,9 +303,9 @@ export default function QuotationPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {(viewQuotation.lineItems || []).map((line: any) => (
+                    {(viewInvoice.lineItems || []).map((line: any) => (
                       <tr key={line.id}>
-                        <td>{line.description || '—'}</td>
+                        <td>{line.description || line.itemDetails || '—'}</td>
                         <td>{line.hsnCode || '—'}</td>
                         <td>{line.qty}</td>
                         <td>{formatCurrency(line.rate)}</td>
@@ -305,22 +319,38 @@ export default function QuotationPage() {
               <div className="quotation-view-totals">
                 <div>
                   <span>Gross Amount</span>
-                  <strong>{formatCurrency(viewQuotation.grossAmount)}</strong>
+                  <strong>{formatCurrency(viewInvoice.grossAmount)}</strong>
+                </div>
+                <div>
+                  <span>CGST</span>
+                  <strong>{formatCurrency(viewInvoice.cgstAmount)}</strong>
+                </div>
+                <div>
+                  <span>SGST</span>
+                  <strong>{formatCurrency(viewInvoice.sgstAmount)}</strong>
+                </div>
+                <div>
+                  <span>IGST</span>
+                  <strong>{formatCurrency(viewInvoice.igstAmount)}</strong>
                 </div>
                 <div>
                   <span>Shipping</span>
-                  <strong>{formatCurrency(viewQuotation.shippingCharge)}</strong>
+                  <strong>{formatCurrency(viewInvoice.shippingCharge)}</strong>
+                </div>
+                <div>
+                  <span>TCS</span>
+                  <strong>{formatCurrency(viewInvoice.tcsAmount)}</strong>
                 </div>
                 <div className="grand">
                   <span>Grand Total</span>
-                  <strong>{formatCurrency(viewQuotation.grandTotal)}</strong>
+                  <strong>{formatCurrency(viewInvoice.grandTotal)}</strong>
                 </div>
               </div>
 
-              {viewQuotation.termsAndConditions && (
+              {viewInvoice.termsAndConditions && (
                 <>
                   <h5 className="quotation-view-heading">Terms & Conditions</h5>
-                  <p className="quotation-view-terms">{viewQuotation.termsAndConditions}</p>
+                  <p className="quotation-view-terms">{viewInvoice.termsAndConditions}</p>
                 </>
               )}
             </div>
@@ -330,7 +360,7 @@ export default function QuotationPage() {
           <button
             type="button"
             className="action-btn print quotation-view-print"
-            onClick={() => viewQuotation?.id && handlePrint(viewQuotation.id)}
+            onClick={() => viewInvoice?.id && handlePrint(viewInvoice.id)}
           >
             Print
           </button>
